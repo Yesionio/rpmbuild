@@ -1,5 +1,5 @@
 # Using Fedora 39 as base image to support rpmbuild (packages will be Dist fc39)
-FROM FROM fedora:39
+FROM fedora:39
 
 # Copying all contents of rpmbuild repo inside container
 COPY . .
