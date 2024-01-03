@@ -49,10 +49,10 @@ async function run() {
     // Copy spec file from path specFile to /github/home/rpmbuild/SPECS/
     await exec.exec(`cp ${specFile.srcFullPath} ${specFile.destFullPath}`);
 
-    // Make the code in /github/workspace/ into a tar.gz, located in /github/home/rpmbuild/SOURCES/
+    // Checkout Everything in the repository to SOURCES dir
     const oldGitDir = process.env.GIT_DIR;
     process.env.GIT_DIR = '/github/workspace/.git';
-    await exec.exec(`git archive --output=/github/home/rpmbuild/SOURCES/${name}-${version}.tar.gz --prefix=${name}-${version}/ HEAD`);
+    await exec.exec(`git --work-tree=/github/home/rpmbuild/SOURCES/ checkout *`);
     await exec.exec(`ln -s /github/home/rpmbuild/SOURCES/${name}-${version}.tar.gz /github/home/rpmbuild/SOURCES/${name}.tar.gz`);
     process.env.GIT_DIR = oldGitDir;
 
@@ -67,12 +67,12 @@ async function run() {
 	}
 
 	// Installs build dependencies
-    await exec.exec(`yum-builddep -y ${specFile.destFullPath}`);
+    await exec.exec(`dnf-builddep -y ${specFile.destFullPath}`);
 
     // Execute rpmbuild , -ba generates both RPMS and SPRMS
     try {
       await exec.exec(
-        `rpmbuild -ba ${specFile.destFullPath}`
+        `rpmbuild --undefine=_disable_source_fetch -bb ${specFile.destFullPath}`
       );
     } catch (err) {
       core.setFailed(`action failed with error: ${err}`);
@@ -104,16 +104,16 @@ async function run() {
     await exec.exec(`mkdir -p rpmbuild/SRPMS`);
     await exec.exec(`mkdir -p rpmbuild/RPMS`);
 
-    await exec.exec(`cp /github/home/rpmbuild/SRPMS/${myOutput} rpmbuild/SRPMS`);
+    // await exec.exec(`cp /github/home/rpmbuild/SRPMS/${myOutput} rpmbuild/SRPMS`);
     await cp.exec(`cp -R /github/home/rpmbuild/RPMS/. rpmbuild/RPMS/`);
 
     await exec.exec(`ls -la rpmbuild/SRPMS`);
     await exec.exec(`ls -la rpmbuild/RPMS`);
     
     // set outputs to path relative to workspace ex ./rpmbuild/
-    core.setOutput("source_rpm_dir_path", `rpmbuild/SRPMS/`);              // path to  SRPMS directory
-    core.setOutput("source_rpm_path", `rpmbuild/SRPMS/${myOutput}`);       // path to Source RPM file
-    core.setOutput("source_rpm_name", `${myOutput}`);                      // name of Source RPM file
+    // core.setOutput("source_rpm_dir_path", `rpmbuild/SRPMS/`);              // path to  SRPMS directory
+    // core.setOutput("source_rpm_path", `rpmbuild/SRPMS/${myOutput}`);       // path to Source RPM file
+    // core.setOutput("source_rpm_name", `${myOutput}`);                      // name of Source RPM file
     core.setOutput("rpm_dir_path", `rpmbuild/RPMS/`);                      // path to RPMS directory
     core.setOutput("rpm_content_type", "application/octet-stream");        // Content-type for Upload
     
